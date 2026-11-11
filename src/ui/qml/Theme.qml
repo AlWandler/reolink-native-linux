@@ -1,26 +1,23 @@
 pragma Singleton
 import QtQuick
 
-// Dark palette approximating the official Reolink Client. Single source of
-// truth for colors/metrics — no literal colors anywhere else in the UI.
+// LNH OPSIQ EYE palette — orange and black.
 QtObject {
-    readonly property color window: "#10161d"
-    readonly property color surface: "#1a222b"
-    readonly property color surfaceAlt: "#222d38"
-    readonly property color border: "#2c3945"
-    readonly property color accent: "#2aa7ff"
-    readonly property color accentDim: "#1d6faa"
-    readonly property color text: "#e8eef4"
-    readonly property color textMuted: "#8b98a5"
-    readonly property color paneBackground: "#05080b"
-    readonly property color danger: "#e5484d"
-    readonly property color online: "#46a758"
+    readonly property color window:         "#0d0d0d"
+    readonly property color surface:        "#161616"
+    readonly property color surfaceAlt:     "#1e1e1e"
+    readonly property color border:         "#2a1500"
+    readonly property color accent:         "#ff8000"
+    readonly property color accentDim:      "#c45f00"
+    readonly property color text:           "#f0f0f0"
+    readonly property color textMuted:      "#888888"
+    readonly property color paneBackground: "#000000"
+    readonly property color danger:         "#e5484d"
+    readonly property color online:         "#46a758"
 
-    readonly property int radius: 6
-    readonly property int spacing: 8
-    // How far the pointer must move before a press becomes a drag rather than
-    // a click, for dragging cameras between grid cells.
+    readonly property int radius:        6
+    readonly property int spacing:       8
     readonly property int dragThreshold: 8
-    readonly property int sidebarWidth: 240
-    readonly property int navHeight: 48
+    readonly property int sidebarWidth:  240
+    readonly property int navHeight:     48
 }

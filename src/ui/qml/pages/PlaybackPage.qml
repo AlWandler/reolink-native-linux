@@ -36,6 +36,7 @@ Item {
     property bool _autoplayed: false // test hook guard
     // HD mode streams the full-resolution main stream over native Baichuan; off =
     // light sub-stream (FLV) scrubbing.
+    property bool paused: false
     property bool hdMode: false
 
     // ---- Synced multi-camera playback ---------------------------------------
@@ -229,7 +230,7 @@ Item {
     // False when the Playback page isn't on screen — stop streaming so a Baichuan
     // session (or FLV stream) isn't left running on the connection-limited NVR.
     property bool active: true
-    onActiveChanged: if (!active) { _suppressResume = true; player.stop(); stopAllPanes(); }
+    onActiveChanged: if (!active) { paused = false; _suppressResume = true; player.stop(); stopAllPanes(); }
 
     // Advance the playhead in realtime while streaming, so the timeline cursor
     // tracks the current position (and play/pause resumes from where you are).
@@ -304,6 +305,7 @@ Item {
 
     // Move the playhead and, if a recording covers that moment, play from it.
     function playAt(sec) {
+        page.paused = false;
         page._suppressResume = false;
         page.playheadSecs = sec;
         if (page.paneCount === 4) {
@@ -326,13 +328,10 @@ Item {
         }
         // Scrub against the sub stream: it is light and always landscape, so the
         // timeline stays responsive. (HD mode below plays the full-res main.)
-        player.loop = false;
-        var url = Devices.playbackUrl(page.deviceRow, epochAt(sec), false);
-        if (url.length > 0) {
-            player.expectedSize = Devices.declaredSize(page.deviceRow, false); // sub
-            player.source = url;
-            player.start();
-        }
+        // SD uses Baichuan sub-stream (mainStream=false) — the HTTP-FLV sub-stream
+        // endpoint (type=1) is only supported on NVRs; standalone cameras drop the
+        // connection immediately. Baichuan works for both streams on all models.
+        Devices.startBaichuanPlayback(page.deviceRow, epochAt(sec), player, false);
     }
 
     // HD: stream the full-resolution main stream over native Baichuan (TCP 9000)
@@ -625,7 +624,7 @@ Item {
                         id: video
                         anchors.fill: parent
                         fillMode: VideoOutput.PreserveAspectFit
-                        visible: player.state === StreamPlayer.Streaming
+                        visible: player.state === StreamPlayer.Streaming || page.paused
                         orientation: page.camRotation
                         transform: [
                             Scale {
@@ -690,7 +689,7 @@ Item {
                 Column {
                     anchors.centerIn: parent
                     spacing: Theme.spacing
-                    visible: player.state !== StreamPlayer.Streaming
+                    visible: player.state !== StreamPlayer.Streaming && !page.paused
                     BusyIndicator {
                         anchors.horizontalCenter: parent.horizontalCenter
                         running: player.state === StreamPlayer.Connecting
@@ -841,17 +840,51 @@ Item {
                     tip: playing ? qsTr("Pause") : qsTr("Play")
                     onActivated: {
                         if (playing) {
+                            page.paused = true;
                             page._suppressResume = true;
                             if (page.paneCount === 4) page.stopAllPanes();
                             else player.stop();
                         } else {
+                            page.paused = false;
                             page.playAt(page.playheadSecs);
                         }
                     }
                 }
                 Ctl { glyph: "⏹"; tip: qsTr("Stop")
-                      onActivated: { page._suppressResume = true;
+                      onActivated: { page.paused = false; page._suppressResume = true;
                                      player.stop(); page.stopAllPanes(); } }
+                Ctl {
+                    glyph: "⏮"
+                    tip: qsTr("Previous clip")
+                    onActivated: {
+                        var segs = timeline.segments.slice().sort(function(a, b) { return a.start - b.start; });
+                        for (var i = segs.length - 1; i >= 0; i--) {
+                            if (segs[i].start < page.playheadSecs - 3) {
+                                page.paused = false;
+                                player.stop();
+                                page.stopAllPanes();
+                                page.playAt(segs[i].start);
+                                return;
+                            }
+                        }
+                    }
+                }
+                Ctl {
+                    glyph: "⏭"
+                    tip: qsTr("Next clip")
+                    onActivated: {
+                        var segs = timeline.segments.slice().sort(function(a, b) { return a.start - b.start; });
+                        for (var i = 0; i < segs.length; i++) {
+                            if (segs[i].start > page.playheadSecs) {
+                                page.paused = false;
+                                player.stop();
+                                page.stopAllPanes();
+                                page.playAt(segs[i].start);
+                                return;
+                            }
+                        }
+                    }
+                }
                 // Export: save a main-stream MP4 of the moment at the playhead.
                 // Single-pane only — it targets THE camera, and grid mode has four.
                 Rectangle {

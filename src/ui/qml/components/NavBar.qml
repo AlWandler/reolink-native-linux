@@ -18,11 +18,20 @@ Rectangle {
         anchors.rightMargin: Theme.spacing * 2
         spacing: Theme.spacing
 
-        Text {
-            text: qsTr("Reolink Client")
-            color: Theme.accent
-            font.pixelSize: 16
-            font.bold: true
+        Row {
+            spacing: 0
+            Text {
+                text: "OPSIQ "
+                color: Theme.accent
+                font.pixelSize: 16
+                font.bold: true
+            }
+            Text {
+                text: "EYE"
+                color: "#ffffff"
+                font.pixelSize: 16
+                font.bold: true
+            }
         }
 
         // App version, always visible (set via setApplicationVersion in main.cpp).
