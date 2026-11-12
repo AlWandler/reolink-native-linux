@@ -46,6 +46,8 @@ public:
     // Seconds-into-day of each detection event for this camera on the given day
     // (dayStart = local midnight epoch). Feeds the playback timeline's markers.
     Q_INVOKABLE QVariantList eventTimesFor(qint64 hostId, int channel, qint64 dayStart) const;
+    // Like eventTimesFor but returns [{secs, type}] so QML can annotate clip list items.
+    Q_INVOKABLE QVariantList eventEntriesForDay(qint64 hostId, int channel, qint64 dayStart) const;
     Q_INVOKABLE void clear();
 
 signals:

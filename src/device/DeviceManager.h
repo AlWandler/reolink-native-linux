@@ -156,6 +156,9 @@ public:
     // writes it under Paths::thumbnailsDir(), and emits eventThumbnailReady with
     // the caller's cookie (no snapshotSaved toast). Silent no-op on failure.
     void captureEventThumbnail(qint64 hostId, int channel, qint64 eventId);
+    // Grab one frame from a recording via ffmpeg and save to /tmp.
+    // Emits recordingThumbnailReady(clipIndex, path) on success; silent on failure.
+    Q_INVOKABLE void captureRecordingThumbnail(int row, qint64 startEpoch, int clipIndex);
 
     // Playback: search a day's recordings (emits recordingsFound with a list of
     // {start,end,type,name} where start/end are seconds into the day), and build
@@ -260,6 +263,7 @@ signals:
     void detectionEvent(qint64 hostId, int channel, const QString &type, const QString &camera);
     // A quiet event-thumbnail capture finished (path is a local JPEG).
     void eventThumbnailReady(qint64 eventId, const QString &path);
+    void recordingThumbnailReady(int clipIndex, const QString &path);
     // A camera (channel >= 0) or a whole host (channel == -1) changed
     // connectivity. name is the camera/host display name.
     void connectivityChanged(qint64 hostId, int channel, const QString &name, bool online);

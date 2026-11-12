@@ -421,6 +421,7 @@ Item {
                 if (info && info.hostId !== undefined) {
                     var dayStart = new Date(page.selYear, page.selMonth - 1, page.selDay).getTime() / 1000;
                     timeline.alarmTicks = Events.eventTimesFor(info.hostId, info.channel, dayStart);
+                    page.dayEvents = Events.eventEntriesForDay(info.hostId, info.channel, dayStart);
                 }
                 // Event jump: play the requested moment now that recordings loaded.
                 if (page._pendingPlayEpoch > 0) {
@@ -503,7 +504,28 @@ Item {
         }
     }
 
-    RowLayout {
+    // Page-level thumbnail cache — populated by captureRecordingThumbnail (C++ / ffmpeg)
+    property var thumbCache: ({})
+    property var dayEvents:   []   // [{secs, type}] for the selected day
+    signal thumbLoaded(int clipIndex, string url)
+
+    Connections {
+        target: Devices
+        function onRecordingThumbnailReady(clipIndex, path) {
+            var c = page.thumbCache;
+            c[clipIndex] = "file://" + path;
+            page.thumbCache = c;
+            page.thumbLoaded(clipIndex, "file://" + path);
+        }
+    }
+    Connections {
+        target: timeline
+        function onSegmentsChanged() {
+            if (page.paneCount === 1) { page.thumbCache = {}; page.dayEvents = []; }
+        }
+    }
+
+        RowLayout {
         anchors.fill: parent
         anchors.margins: Theme.spacing
         spacing: Theme.spacing
@@ -959,29 +981,190 @@ Item {
             }
         }
 
-        // ---- Right: calendar ----
+        // ---- Right: calendar + clip thumbnail list ----
         Rectangle {
             Layout.preferredWidth: 240
             Layout.fillHeight: true
             color: Theme.surface
             border.color: Theme.border
             radius: Theme.radius
+            clip: true
 
-            MonthCalendar {
-                anchors.top: parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.topMargin: Theme.spacing
-                year: page.selYear
-                month: page.selMonth
-                selDay: page.selDay
-                markedDays: page.recordingDays
-                onDateSelected: (y, m, d) => {
-                    page.selYear = y; page.selMonth = m; page.selDay = d;
-                    // Cached per-camera days are for the OLD date; a stale entry
-                    // would make assignGridPane skip the search for a camera
-                    // re-entering the grid and play the wrong day.
-                    page.gridSegs = ({});
-                    page.refresh();
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                MonthCalendar {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Theme.spacing
+                    year: page.selYear
+                    month: page.selMonth
+                    selDay: page.selDay
+                    markedDays: page.recordingDays
+                    onDateSelected: (y, m, d) => {
+                        page.selYear = y; page.selMonth = m; page.selDay = d;
+                        page.gridSegs = ({});
+                        page.refresh();
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8; Layout.rightMargin: 8
+                    height: 1; color: Theme.border
+                }
+
+                Text {
+                    visible: timeline.segments.length === 0
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Theme.spacing * 2
+                    text: page.deviceRow < 0 ? qsTr("Select a camera
+and date")
+                                             : qsTr("No clips")
+                    color: Theme.textMuted
+                    font.pixelSize: 11; font.family: "monospace"
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                ListView {
+                    id: clipList
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: timeline.segments.length > 0
+                    clip: true
+                    spacing: 2
+                    bottomMargin: 4
+
+                    model: timeline.segments
+
+                    delegate: Rectangle {
+                        id: clipDel
+                        required property var modelData
+                        required property int index
+                        width: ListView.view.width - 6
+                        x: 3
+                        height: 70
+                        radius: Theme.radius
+                        color: clipHov.hovered ? Theme.surfaceAlt : "transparent"
+                        border.color: clipHov.hovered ? Theme.border : "transparent"
+
+
+
+                        // Trigger-type badges — show what detection(s) fired for this clip
+                        Item {
+                            id: badgeBox
+                            anchors.left: parent.left; anchors.leftMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 72; height: 60
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 3
+
+                                Repeater {
+                                    model: {
+                                        var types = [];
+                                        var s = modelData.start, e = modelData.end;
+                                        for (var i = 0; i < page.dayEvents.length; i++) {
+                                            var ev = page.dayEvents[i];
+                                            if (ev.secs >= s && ev.secs <= e
+                                                    && types.indexOf(ev.type) < 0)
+                                                types.push(ev.type);
+                                        }
+                                        return types;  // empty = no badges
+                                    }
+
+                                    Rectangle {
+                                        required property string modelData
+                                        width: badgeLabel.implicitWidth + 10
+                                        height: 18; radius: 3
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        color: {
+                                            switch (modelData) {
+                                            case "person":  return "#1a4a8a";
+                                            case "vehicle": return "#7a5500";
+                                            case "pet":     return "#1a5a2a";
+                                            case "visitor": return "#4a1a7a";
+                                            case "motion":  return "#5a2800";
+                                            default:        return "#2a2a2a";
+                                            }
+                                        }
+                                        border.color: {
+                                            switch (modelData) {
+                                            case "person":  return "#4488ff";
+                                            case "vehicle": return "#ffcc00";
+                                            case "pet":     return "#44cc66";
+                                            case "visitor": return "#aa66ff";
+                                            case "motion":  return Theme.accent;
+                                            default:        return "#555555";
+                                            }
+                                        }
+                                        border.width: 1
+                                        Text {
+                                            id: badgeLabel
+                                            anchors.centerIn: parent
+                                            text: {
+                                                switch (parent.modelData) {
+                                                case "person":  return "PERSON";
+                                                case "vehicle": return "VEHICLE";
+                                                case "pet":     return "PET";
+                                                case "visitor": return "VISITOR";
+                                                case "motion":  return "MOTION";
+                                                case "timer":   return "TIMER";
+                                                default:        return parent.modelData.toUpperCase();
+                                                }
+                                            }
+                                            color: {
+                                                switch (parent.modelData) {
+                                                case "person":  return "#88bbff";
+                                                case "vehicle": return "#ffcc44";
+                                                case "pet":     return "#66dd88";
+                                                case "visitor": return "#cc88ff";
+                                                case "motion":  return Theme.accent;
+                                                default:        return "#aaaaaa";
+                                                }
+                                            }
+                                            font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Time + duration
+                        Column {
+                            anchors.left: badgeBox.right; anchors.leftMargin: 6
+                            anchors.right: parent.right; anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 5
+
+                            Text {
+                                property real s: Math.floor(modelData.start)
+                                text: ("0"+Math.floor(s/3600)).slice(-2)+":"+
+                                      ("0"+Math.floor(s%3600/60)).slice(-2)+":"+
+                                      ("0"+Math.floor(s%60)).slice(-2)
+                                color: Theme.text
+                                font.pixelSize: 13; font.bold: true; font.family: "monospace"
+                                width: parent.width; elide: Text.ElideRight
+                            }
+                            Text {
+                                property int dur: Math.round(modelData.end - modelData.start)
+                                text: Math.floor(dur/60)+"m "+("0"+(dur%60)).slice(-2)+"s"
+                                color: Theme.textMuted
+                                font.pixelSize: 11; font.family: "monospace"
+                            }
+                        }
+
+                        HoverHandler { id: clipHov }
+                        TapHandler {
+                            onTapped: {
+                                page.paused = false;
+                                player.stop();
+                                page.stopAllPanes();
+                                page.playAt(modelData.start);
+                            }
+                        }
+                    }
                 }
             }
         }

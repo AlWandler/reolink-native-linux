@@ -299,4 +299,23 @@ void EventManager::clear()
     reload();
 }
 
+QVariantList EventManager::eventEntriesForDay(qint64 hostId, int channel, qint64 dayStart) const
+{
+    QVariantList out;
+    const qint64 dayEnd = dayStart + 86400;
+    for (const EventRecord &e : m_all) {
+        if (e.hostId != hostId || e.channel != channel)
+            continue;
+        if (e.timestamp < dayStart || e.timestamp >= dayEnd)
+            continue;
+        if (e.type == QLatin1String("offline") || e.type == QLatin1String("online"))
+            continue;
+        QVariantMap entry;
+        entry[QStringLiteral("secs")] = int(e.timestamp - dayStart);
+        entry[QStringLiteral("type")] = e.type;
+        out.append(entry);
+    }
+    return out;
+}
+
 } // namespace rl

@@ -963,6 +963,47 @@ void DeviceManager::captureEventThumbnail(qint64 hostId, int channel, qint64 eve
     }));
 }
 
+void DeviceManager::captureRecordingThumbnail(int row, qint64 startEpoch, int clipIndex)
+{
+    const QString url = playbackUrl(row, startEpoch, true /*mainStream*/);
+    if (url.isEmpty())
+        return;
+
+    const QString path = QStringLiteral("/tmp/opsiq_thumb_%1.jpg").arg(clipIndex);
+
+    auto *proc = new QProcess(this);
+    proc->setProgram(QStringLiteral("/usr/bin/ffmpeg")); // explicit path
+    proc->setArguments({
+        QStringLiteral("-y"),
+        QStringLiteral("-loglevel"), QStringLiteral("error"),
+        QStringLiteral("-i"), url,
+        QStringLiteral("-frames:v"), QStringLiteral("1"),
+        QStringLiteral("-vf"), QStringLiteral("scale=160:90"),
+        QStringLiteral("-q:v"), QStringLiteral("5"),
+        path
+    });
+
+    // Kill the process if the camera doesn't support this endpoint
+    QTimer *watchdog = new QTimer(proc);
+    watchdog->setSingleShot(true);
+    connect(watchdog, &QTimer::timeout, proc, &QProcess::kill);
+    watchdog->start(8000);
+
+    connect(proc,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, proc, clipIndex, path](int exitCode, QProcess::ExitStatus) {
+        proc->deleteLater();
+        if (exitCode == 0 && QFile::exists(path) && QFileInfo(path).size() > 0)
+            QMetaObject::invokeMethod(
+                this, [this, clipIndex, path] {
+                    emit recordingThumbnailReady(clipIndex, path);
+                },
+                Qt::QueuedConnection);
+    });
+
+    proc->start();
+}
+
 void DeviceManager::searchRecordings(int row, int year, int month, int day)
 {
     auto client = clientFor(row);
