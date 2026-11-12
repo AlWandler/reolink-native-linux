@@ -1031,11 +1031,14 @@ Item {
                 Item {
                     id: calWrapper
                     Layout.fillWidth: true
-                    height: page.calCollapsed ? 0 : 216 + Theme.spacing
+                    Layout.minimumHeight: 0
+                    // Drive Layout.preferredHeight via an animated helper so the
+                    // ColumnLayout sees the change and lets the clip list fill the gap.
+                    property real _h: page.calCollapsed ? 0 : 216 + Theme.spacing
+                    Behavior on _h { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
+                    Layout.preferredHeight: _h
+                    Layout.maximumHeight: _h
                     clip: true
-                    Behavior on height {
-                        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
-                    }
 
                     MonthCalendar {
                         anchors.horizontalCenter: parent.horizontalCenter
