@@ -5,6 +5,10 @@ import ReolinkApp
 import ReolinkApp.Core
 
 ApplicationWindow {
+    // ── Orientation ──────────────────────────────────────────────────
+    // Set by the deployment environment (portrait HMI vs landscape desktop).
+    // All pages read this to choose their layout arrangement.
+    property bool isPortrait: width < height
     id: window
     width: 1400
     height: 860
@@ -298,7 +302,11 @@ ApplicationWindow {
     }
 
     // Detached camera windows for multi-monitor viewing.
-    Component { id: popoutComponent; PoppedWindow {} }
+    Component { id: popoutComponent; PoppedWindow {
+    // ── Orientation ──────────────────────────────────────────────────
+    // Set by the deployment environment (portrait HMI vs landscape desktop).
+    // All pages read this to choose their layout arrangement.
+    property bool isPortrait: width < height} }
     function openPopout(row, label) {
         popoutComponent.createObject(window, { deviceRow: row, label: label });
     }
