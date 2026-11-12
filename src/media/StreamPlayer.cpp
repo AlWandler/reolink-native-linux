@@ -875,7 +875,6 @@ void StreamPlayer::pushRawAudioBytes(const QByteArray &aacData)
             if (!m_aacSwr) {
                 m_aacOutRate = frame->sample_rate > 0 ? frame->sample_rate : 16000;
                 m_aacOutCh   = frame->ch_layout.nb_channels > 0 ? frame->ch_layout.nb_channels : 1;
-                         << "ch=" << m_aacOutCh << "fmt=" << frame->format;
                 AVChannelLayout outLayout = (m_aacOutCh == 1)
                     ? AVChannelLayout AV_CHANNEL_LAYOUT_MONO
                     : AVChannelLayout AV_CHANNEL_LAYOUT_STEREO;
