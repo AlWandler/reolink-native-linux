@@ -45,7 +45,8 @@ add_library(reolink_core STATIC
 target_include_directories(reolink_core PUBLIC src third_party)
 target_link_libraries(reolink_core PUBLIC
     Qt6::Core Qt6::Gui Qt6::Sql Qt6::Multimedia Qt6::Concurrent Qt6::Network Qt6::DBus
-    PkgConfig::FFMPEG PkgConfig::CURL PkgConfig::SECRET)
+    PkgConfig::FFMPEG PkgConfig::CURL PkgConfig::SECRET
+    swresample)
 
 # ---------------------------------------------------------------------------
 # Application

@@ -321,6 +321,9 @@ void BaichuanClient::pumpMedia(QTcpSocket &sock, const QByteArray &aesKey, quint
     const bool pace = m_p.startEpoch > 0;
     QElapsedTimer clock;
     quint32 firstMicros = 0;
+    parser.onAudio = [&](const BcMediaParser::AudioFrame &af) {
+        if (onAudioBytes) onAudioBytes(af.data, af.isAAC);
+    };
     parser.onVideo = [&](const BcMediaParser::VideoFrame &f) {
         if (f.codec != BcMediaParser::Codec::Unknown) {
             QMutexLocker lock(&m_mutex);

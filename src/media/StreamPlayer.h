@@ -5,6 +5,8 @@
 #include <QPointer>
 #include <QSize>
 #include <QString>
+#include <QAudioSink>
+extern "C" { struct AVCodecContext; struct SwrContext; }
 #include <QVideoSink>
 
 #include <atomic>
@@ -114,6 +116,14 @@ public:
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
 
+    // Called on GUI thread by the worker when audio format is known and when
+    // PCM data is ready to push.  Not part of the QML API.
+    void setupAudioOutput(int sampleRate, int channels);
+    void applyAudioFromWorker(const QByteArray &pcm);
+    // Decode a raw AAC frame (from Baichuan) and push PCM to the audio sink.
+    // Safe to call from any thread — marshals to GUI thread internally.
+    void pushRawAudioBytes(const QByteArray &aacData);
+
     bool recording() const;
     // Begin/stop stream-copy recording of the live session to an MP4. An empty
     // path auto-names a file in the recordings dir. Returns false if not streaming.
@@ -156,6 +166,13 @@ private:
 
     // Set via QML before start(); copied into each new Session. Survives stop().
     QPointer<QVideoSink> m_pendingSink;
+    QAudioSink *m_audioSink = nullptr;
+    QIODevice  *m_audioDev  = nullptr;
+    // Lazy AAC decoder for Baichuan audio (GUI thread only)
+    AVCodecContext *m_aacDec = nullptr;
+    SwrContext     *m_aacSwr = nullptr;
+    int             m_aacOutRate = 0;
+    int             m_aacOutCh   = 0;
 
     // The current session; replaced on each start(). Held so we can signal abort
     // and read framesDecoded. The worker holds its own shared_ptr copy.

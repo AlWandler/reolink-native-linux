@@ -24,6 +24,11 @@ class BcMediaParser
 public:
     enum class Codec { Unknown, H264, H265 };
 
+    struct AudioFrame {
+        bool    isAAC = true;   // true="05wb" AAC, false="01wb" ADPCM
+        QByteArray data;
+    };
+
     struct VideoFrame {
         bool keyFrame = false;
         Codec codec = Codec::Unknown;
@@ -34,6 +39,8 @@ public:
 
     // Called for each complete video frame, in stream order.
     std::function<void(const VideoFrame &)> onVideo;
+    // Called for each complete audio frame; not set = skip (old behaviour).
+    std::function<void(const AudioFrame &)> onAudio;
 
     // Append decrypted media bytes from one BC message and parse any now-complete
     // frames (invoking onVideo). Returns the number of video frames emitted.

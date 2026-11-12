@@ -59,6 +59,10 @@ public:
     // Returns the number of bytes written, 0 on clean end, or <0 on abort/error.
     int read(unsigned char *buf, int size);
 
+    // Raw AAC (isAAC=true) or ADPCM bytes from each audio frame in the stream.
+    // Called on the BaichuanClient worker thread — receivers must be thread-safe.
+    std::function<void(const QByteArray &, bool /*isAAC*/)> onAudioBytes;
+
     // "h264" / "hevc" once known (after the first frame); empty until then.
     QString ffmpegFormat();
 

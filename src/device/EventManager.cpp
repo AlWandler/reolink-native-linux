@@ -311,8 +311,9 @@ QVariantList EventManager::eventEntriesForDay(qint64 hostId, int channel, qint64
         if (e.type == QLatin1String("offline") || e.type == QLatin1String("online"))
             continue;
         QVariantMap entry;
-        entry[QStringLiteral("secs")] = int(e.timestamp - dayStart);
-        entry[QStringLiteral("type")] = e.type;
+        entry[QStringLiteral("secs")]      = int(e.timestamp - dayStart);
+        entry[QStringLiteral("type")]      = e.type;
+        entry[QStringLiteral("thumbnail")] = e.thumbnail;
         out.append(entry);
     }
     return out;

@@ -1035,7 +1035,7 @@ and date")
                     spacing: 2
                     bottomMargin: 4
 
-                    model: timeline.segments
+                    model: timeline.segments.slice().reverse()
 
                     delegate: Rectangle {
                         id: clipDel
@@ -1050,16 +1050,47 @@ and date")
 
 
 
-                        // Trigger-type badges — show what detection(s) fired for this clip
+                        // Thumbnail from matching event snapshot + type badges
                         Item {
                             id: badgeBox
                             anchors.left: parent.left; anchors.leftMargin: 4
                             anchors.verticalCenter: parent.verticalCenter
                             width: 72; height: 60
 
+                            // Pick the first event in this clip's range that has a thumbnail
+                            property string snapPath: {
+                                var s = modelData.start, e = modelData.end;
+                                for (var i = 0; i < page.dayEvents.length; i++) {
+                                    var ev = page.dayEvents[i];
+                                    if (ev.secs >= s && ev.secs <= e && ev.thumbnail)
+                                        return ev.thumbnail;
+                                }
+                                return "";
+                            }
+
+                            // Snapshot image (fills the box when available)
+                            Rectangle {
+                                visible: badgeBox.snapPath !== ""
+                                anchors.fill: parent
+                                color: Theme.paneBackground
+                                radius: 3
+                                clip: true
+                                Image {
+                                    anchors.fill: parent
+                                    fillMode: Image.PreserveAspectCrop
+                                    source: badgeBox.snapPath !== "" ? "file://" + badgeBox.snapPath : ""
+                                    cache: false
+                                }
+                            }
+
+                            // Badge column — centred when no image, bottom-docked when image
                             Column {
-                                anchors.centerIn: parent
-                                spacing: 3
+                                id: badgeCol
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.bottom: badgeBox.snapPath !== "" ? parent.bottom : undefined
+                                anchors.bottomMargin: badgeBox.snapPath !== "" ? 3 : 0
+                                anchors.verticalCenter: badgeBox.snapPath === "" ? parent.verticalCenter : undefined
+                                spacing: 2
 
                                 Repeater {
                                     model: {

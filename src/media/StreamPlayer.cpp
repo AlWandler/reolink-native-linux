@@ -22,6 +22,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 #include <libavutil/time.h>
 #include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
 }
 
 namespace rl {
@@ -561,6 +562,49 @@ bool runSession(const std::shared_ptr<Session> &s, bool *streamingOut)
                     << "x" << stream->codecpar->height
                     << (hwPixFmt != AV_PIX_FMT_NONE ? "[hw]" : "[sw]");
 
+    // ── Audio stream (optional — silent if unavailable) ───────────────────
+    const int audioIndex = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+    AVCodecContext *audioDec = nullptr;
+    SwrContext     *swr      = nullptr;
+    int outSampleRate = 0, outChannels = 0;
+    struct AudioGuard {
+        AVCodecContext **c; SwrContext **sw;
+        ~AudioGuard() { if (*c) avcodec_free_context(c); if (*sw) swr_free(sw); }
+    } audioGuard{&audioDec, &swr};
+
+    if (audioIndex >= 0) {
+        AVStream *as = fmt->streams[audioIndex];
+        const AVCodec *ac = avcodec_find_decoder(as->codecpar->codec_id);
+        if (ac) {
+            audioDec = avcodec_alloc_context3(ac);
+            avcodec_parameters_to_context(audioDec, as->codecpar);
+            if (avcodec_open2(audioDec, ac, nullptr) >= 0) {
+                // Resample to signed 16-bit at the stream's native rate
+                outSampleRate = audioDec->sample_rate > 0 ? audioDec->sample_rate : 16000;
+                outChannels   = audioDec->ch_layout.nb_channels > 0
+                                     ? audioDec->ch_layout.nb_channels : 1;
+                AVChannelLayout outLayout = (outChannels == 1)
+                    ? AVChannelLayout AV_CHANNEL_LAYOUT_MONO
+                    : AVChannelLayout AV_CHANNEL_LAYOUT_STEREO;
+                swr_alloc_set_opts2(&swr, &outLayout, AV_SAMPLE_FMT_S16, outSampleRate,
+                                    &audioDec->ch_layout,
+                                    static_cast<AVSampleFormat>(audioDec->sample_fmt),
+                                    audioDec->sample_rate, 0, nullptr);
+                if (!swr || swr_init(swr) < 0) {
+                    swr_free(&swr); swr = nullptr;
+                } else {
+                    // Tell GUI thread to prepare QAudioSink
+                    const int sr = outSampleRate, ch = outChannels;
+                    QMutexLocker lk(&s->backMutex);
+                    if (s->player)
+                        QMetaObject::invokeMethod(s->player,
+                            [sp = s->player.data(), sr, ch] { if (sp) sp->setupAudioOutput(sr, ch); },
+                            Qt::QueuedConnection);
+                }
+            }
+        }
+    }
+
     AVPacket *packet = av_packet_alloc();
     AVFrame *frame = av_frame_alloc();
     AVFrame *hwTransfer = av_frame_alloc();
@@ -727,6 +771,33 @@ bool runSession(const std::shared_ptr<Session> &s, bool *streamingOut)
             finalizeRecording();
             return !packetSource && (live || s->retryOnError.load());
         }
+        if (packet->stream_index == audioIndex && audioDec && swr) {
+            if (avcodec_send_packet(audioDec, packet) == 0) {
+                AVFrame *af = av_frame_alloc();
+                while (avcodec_receive_frame(audioDec, af) == 0) {
+                    const int maxOut = static_cast<int>(
+                        av_rescale_rnd(swr_get_delay(swr, audioDec->sample_rate) + af->nb_samples,
+                                       outSampleRate, audioDec->sample_rate, AV_ROUND_UP));
+                    QByteArray pcm(maxOut * outChannels * 2, Qt::Uninitialized);
+                    uint8_t *out = reinterpret_cast<uint8_t *>(pcm.data());
+                    const int n = swr_convert(swr, &out, maxOut,
+                                              const_cast<const uint8_t **>(af->extended_data),
+                                              af->nb_samples);
+                    if (n > 0) {
+                        pcm.resize(n * outChannels * 2);
+                        QMutexLocker lk(&s->backMutex);
+                        if (s->player)
+                            QMetaObject::invokeMethod(s->player,
+                                [sp = s->player.data(), pcm] { if (sp) sp->applyAudioFromWorker(pcm); },
+                                Qt::QueuedConnection);
+                    }
+                    av_frame_unref(af);
+                }
+                av_frame_free(&af);
+            }
+            av_packet_unref(packet);
+            continue;
+        }
         if (packet->stream_index != videoIndex) {
             av_packet_unref(packet);
             continue;
@@ -774,6 +845,91 @@ void runWorker(std::shared_ptr<Session> s)
 }
 
 } // namespace
+
+void StreamPlayer::pushRawAudioBytes(const QByteArray &aacData)
+{
+    QMetaObject::invokeMethod(this, [this, aacData] {
+        // ── Lazy-init AAC decoder ──────────────────────────────────────────
+        if (!m_aacDec) {
+            const AVCodec *c = avcodec_find_decoder(AV_CODEC_ID_AAC);
+            m_aacDec = avcodec_alloc_context3(c);
+            if (avcodec_open2(m_aacDec, c, nullptr) < 0) {
+                avcodec_free_context(&m_aacDec);
+            }
+        }
+
+        AVPacket *pkt = av_packet_alloc();
+        pkt->data = const_cast<uint8_t *>(
+                        reinterpret_cast<const uint8_t *>(aacData.constData()));
+        pkt->size = aacData.size();
+        const int sendRet = avcodec_send_packet(m_aacDec, pkt);
+        av_packet_free(&pkt);
+        if (sendRet < 0) {
+        }
+
+        AVFrame *frame = av_frame_alloc();
+        int framesDecoded = 0;
+        while (avcodec_receive_frame(m_aacDec, frame) == 0) {
+            ++framesDecoded;
+            // ── Lazy-init resampler + audio sink ──────────────────────────
+            if (!m_aacSwr) {
+                m_aacOutRate = frame->sample_rate > 0 ? frame->sample_rate : 16000;
+                m_aacOutCh   = frame->ch_layout.nb_channels > 0 ? frame->ch_layout.nb_channels : 1;
+                         << "ch=" << m_aacOutCh << "fmt=" << frame->format;
+                AVChannelLayout outLayout = (m_aacOutCh == 1)
+                    ? AVChannelLayout AV_CHANNEL_LAYOUT_MONO
+                    : AVChannelLayout AV_CHANNEL_LAYOUT_STEREO;
+                swr_alloc_set_opts2(&m_aacSwr, &outLayout, AV_SAMPLE_FMT_S16, m_aacOutRate,
+                                    &frame->ch_layout,
+                                    static_cast<AVSampleFormat>(frame->format),
+                                    frame->sample_rate, 0, nullptr);
+                if (!m_aacSwr || swr_init(m_aacSwr) < 0) {
+                    swr_free(&m_aacSwr); m_aacSwr = nullptr;
+                    av_frame_unref(frame); break;
+                }
+                // Create audio sink NOW (m_audioDev may have been null until this point)
+                setupAudioOutput(m_aacOutRate, m_aacOutCh);
+            }
+            const int maxOut = static_cast<int>(
+                av_rescale_rnd(swr_get_delay(m_aacSwr, frame->sample_rate) + frame->nb_samples,
+                               m_aacOutRate, frame->sample_rate, AV_ROUND_UP));
+            QByteArray pcm(maxOut * m_aacOutCh * 2, Qt::Uninitialized);
+            uint8_t *out = reinterpret_cast<uint8_t *>(pcm.data());
+            const int n = swr_convert(m_aacSwr, &out, maxOut,
+                                      const_cast<const uint8_t **>(frame->extended_data),
+                                      frame->nb_samples);
+            if (n > 0 && m_audioDev)
+                m_audioDev->write(pcm.constData(), n * m_aacOutCh * 2);
+            av_frame_unref(frame);
+        }
+        if (framesDecoded == 0 && m_aacDec)
+        av_frame_free(&frame);
+    }, Qt::QueuedConnection);
+}
+
+void StreamPlayer::setupAudioOutput(int sampleRate, int channels)
+{
+    // Tear down any existing sink first
+    if (m_audioSink) {
+        m_audioSink->stop();
+        delete m_audioSink;
+        m_audioSink = nullptr;
+        m_audioDev  = nullptr;
+    }
+    QAudioFormat fmt;
+    fmt.setSampleRate(sampleRate);
+    fmt.setChannelCount(channels);
+    fmt.setSampleFormat(QAudioFormat::Int16);
+    m_audioSink = new QAudioSink(fmt, this);
+    m_audioSink->setBufferSize(sampleRate * channels * 2 / 4); // ~250 ms buffer
+    m_audioDev  = m_audioSink->start(); // push mode
+}
+
+void StreamPlayer::applyAudioFromWorker(const QByteArray &pcm)
+{
+    if (m_audioDev)
+        m_audioDev->write(pcm.constData(), pcm.size());
+}
 
 // applyStateFromWorker runs on the GUI thread (posted via invokeMethod).
 void StreamPlayer::applyStateFromWorker(State state, const QString &error)
@@ -965,6 +1121,17 @@ void StreamPlayer::stop()
     if (m_recording) {
         m_recording = false;
         emit recordingChanged();
+    }
+    // Tear down AAC decoder (GUI thread)
+    if (m_aacDec) { avcodec_free_context(&m_aacDec); m_aacDec = nullptr; }
+    if (m_aacSwr) { swr_free(&m_aacSwr); m_aacSwr = nullptr; }
+    m_aacOutRate = 0; m_aacOutCh = 0;
+    // Tear down audio sink — must happen on GUI thread (we are on GUI thread here)
+    if (m_audioSink) {
+        m_audioSink->stop();
+        delete m_audioSink;
+        m_audioSink = nullptr;
+        m_audioDev  = nullptr;
     }
     if (m_state != State::Idle)
         applyState(State::Stopped, QString());

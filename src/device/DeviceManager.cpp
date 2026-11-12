@@ -1293,6 +1293,14 @@ void DeviceManager::startBaichuan(int row, qint64 startEpoch, StreamPlayer *play
                      : (e.mainCodec == QLatin1String("h265") ? QStringLiteral("hevc")
                                                              : QStringLiteral("h264"));
     player->setExpectedSize(mainStream ? e.mainSize : e.subSize);
+    // Wire Baichuan audio → StreamPlayer's raw AAC decoder
+    {
+        QPointer<StreamPlayer> sp(player);
+        client->onAudioBytes = [sp](const QByteArray &aac, bool isAAC) {
+            if (!isAAC) return; // skip ADPCM for now
+            if (sp) sp->pushRawAudioBytes(aac);
+        };
+    }
     player->setPacketSource(
         [client](unsigned char *buf, int size) { return client->read(buf, size); },
         format,
