@@ -13,6 +13,7 @@ Item {
     id: page
 
     property bool isPortrait: width < height
+    property bool calCollapsed: false
 
     property int deviceRow: -1
     property int selYear: 2026
@@ -1000,17 +1001,55 @@ Item {
                 anchors.fill: parent
                 spacing: 0
 
-                MonthCalendar {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: Theme.spacing
-                    year: page.selYear
-                    month: page.selMonth
-                    selDay: page.selDay
-                    markedDays: page.recordingDays
-                    onDateSelected: (y, m, d) => {
-                        page.selYear = y; page.selMonth = m; page.selDay = d;
-                        page.gridSegs = ({});
-                        page.refresh();
+                // ── Calendar header — tap to collapse/expand ──────────
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 34
+                    color: calHdrHov.hovered ? Theme.surfaceAlt : Theme.surface
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10; anchors.rightMargin: 10
+                        spacing: 6
+
+                        Text {
+                            text: Qt.locale().monthName(page.selMonth - 1, Locale.LongFormat)
+                                  + "  " + page.selYear
+                            color: Theme.text; font.pixelSize: 11; font.bold: true
+                            Layout.fillWidth: true
+                        }
+                        Text {
+                            text: page.calCollapsed ? "▼" : "▲"
+                            color: Theme.accent; font.pixelSize: 11
+                        }
+                    }
+                    HoverHandler { id: calHdrHov }
+                    TapHandler { onTapped: page.calCollapsed = !page.calCollapsed }
+                }
+
+                // ── Collapsible calendar body ─────────────────────────────
+                Item {
+                    id: calWrapper
+                    Layout.fillWidth: true
+                    height: page.calCollapsed ? 0 : 216 + Theme.spacing
+                    clip: true
+                    Behavior on height {
+                        NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
+                    }
+
+                    MonthCalendar {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.top: parent.top
+                        anchors.topMargin: Theme.spacing / 2
+                        year: page.selYear
+                        month: page.selMonth
+                        selDay: page.selDay
+                        markedDays: page.recordingDays
+                        onDateSelected: (y, m, d) => {
+                            page.selYear = y; page.selMonth = m; page.selDay = d;
+                            page.gridSegs = ({});
+                            page.refresh();
+                        }
                     }
                 }
 
