@@ -12,6 +12,8 @@ import ReolinkApp.Core
 Item {
     id: page
 
+    property bool isPortrait: width < height
+
     property int deviceRow: -1
     property int selYear: 2026
     property int selMonth: 7
@@ -525,10 +527,12 @@ Item {
         }
     }
 
-        RowLayout {
+        GridLayout {
         anchors.fill: parent
         anchors.margins: Theme.spacing
-        spacing: Theme.spacing
+        columnSpacing: Theme.spacing
+        rowSpacing: Theme.spacing
+        columns: page.isPortrait ? 1 : 2
 
         // ---- Main: device bar + video + timeline + controls ----
         ColumnLayout {
@@ -983,8 +987,10 @@ Item {
 
         // ---- Right: calendar + clip thumbnail list ----
         Rectangle {
-            Layout.preferredWidth: 240
-            Layout.fillHeight: true
+            Layout.preferredWidth: page.isPortrait ? -1 : 240
+            Layout.fillWidth: page.isPortrait
+            Layout.preferredHeight: page.isPortrait ? 340 : -1
+            Layout.fillHeight: !page.isPortrait
             color: Theme.surface
             border.color: Theme.border
             radius: Theme.radius
