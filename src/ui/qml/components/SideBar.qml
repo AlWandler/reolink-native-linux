@@ -381,6 +381,24 @@ visible: !root.hidden
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
+
+                    // ── Gear button — opens camera management menu on tap ──
+                    Rectangle {
+                        width: 30; height: 30; radius: 4
+                        color: gearHov.hovered ? Theme.surfaceAlt : "transparent"
+                        Layout.alignment: Qt.AlignVCenter
+                        Text {
+                            anchors.centerIn: parent
+                            text: "⚙"
+                            color: Theme.textMuted
+                            font.pixelSize: 14
+                        }
+                        HoverHandler { id: gearHov }
+                        TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: camMenu.popup()
+                        }
+                    }
                 }
 
                 // Dragged into a Live View cell to put this camera there. Lives in
