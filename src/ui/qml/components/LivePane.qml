@@ -411,14 +411,14 @@ Rectangle {
 
     Rectangle {
         id: toolbar
-        visible: root.hasSource && (paneHover.hovered || root.ptzOpen)
+        visible: root.hasSource
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: 8
         radius: Theme.radius
         color: "#cc0d141b"
         border.color: Theme.border
-        height: 34
+        height: 46
         width: toolRow.implicitWidth + 16
 
         Row {
@@ -432,14 +432,14 @@ Rectangle {
                 property bool active: false
                 property bool enabledTool: true
                 signal activated()
-                width: 28; height: 28; radius: 4
+                width: 38; height: 38; radius: 6
                 visible: enabledTool
                 color: active ? Theme.accentDim : (hover.hovered ? Theme.surfaceAlt : "transparent")
                 Text {
                     anchors.centerIn: parent
                     text: parent.glyph
                     color: parent.active ? Theme.text : Theme.textMuted
-                    font.pixelSize: 14
+                    font.pixelSize: 15
                 }
                 HoverHandler { id: hover }
                 ToolTip {
