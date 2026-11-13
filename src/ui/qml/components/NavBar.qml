@@ -99,32 +99,5 @@ Rectangle {
 
         Item { Layout.fillWidth: true }
 
-        Rectangle {
-            width: 32
-            height: 32
-            radius: Theme.radius
-            color: fullscreenArea.containsMouse ? Theme.surfaceAlt : "transparent"
-            Text {
-                anchors.centerIn: parent
-                text: "⛶"
-                color: Theme.textMuted
-                font.pixelSize: 16
-            }
-            MouseArea {
-                id: fullscreenArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.fullscreenRequested()
-            }
-            ToolTip {
-                visible: fullscreenArea.containsMouse
-                delay: 500
-                x: (parent.width - width) / 2
-                y: parent.height + 6
-                contentItem: Text { text: qsTr("Fullscreen (F11)"); color: Theme.text; font.pixelSize: 11 }
-                background: Rectangle { color: Theme.surfaceAlt; border.color: Theme.border; radius: 4 }
-            }
-        }
     }
 }
