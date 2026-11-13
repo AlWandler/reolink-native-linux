@@ -14,6 +14,7 @@ Item {
 
     property bool isPortrait: width < height
     property bool calCollapsed: false
+    property bool playbackMax: false
 
     property int deviceRow: -1
     property int selYear: 2026
@@ -730,6 +731,51 @@ Item {
                             : qsTr("Click a recording on the timeline to play")
                     }
                 }
+
+                // ── Persistent touch toolbar: zoom + maximize ─────────────
+                Rectangle {
+                    visible: player.state === StreamPlayer.Streaming || page.paused
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottomMargin: 8
+                    radius: Theme.radius
+                    color: "#cc0d141b"
+                    border.color: Theme.border
+                    height: 46
+                    width: pbToolRow.implicitWidth + 16
+
+                    Row {
+                        id: pbToolRow
+                        anchors.centerIn: parent
+                        spacing: 2
+
+                        component PbBtn: Rectangle {
+                            property string glyph: ""
+                            property bool active: false
+                            signal activated()
+                            width: 38; height: 38; radius: 6
+                            color: active ? Theme.accentDim : (pbBtnHov.hovered ? Theme.surfaceAlt : "transparent")
+                            Text { anchors.centerIn: parent; text: parent.glyph
+                                   color: parent.active ? Theme.text : Theme.textMuted; font.pixelSize: 15 }
+                            HoverHandler { id: pbBtnHov }
+                            TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: parent.activated() }
+                        }
+
+                        PbBtn {
+                            glyph: "⊕"
+                            active: videoBox.zoom > 1.01
+                            onActivated: {
+                                if (videoBox.zoom > 1.01) { videoBox.zoom = 1; videoBox.panX = 0; videoBox.panY = 0; }
+                                else videoBox.zoom = 2;
+                            }
+                        }
+                        PbBtn {
+                            glyph: "⛶"
+                            active: page.playbackMax
+                            onActivated: page.playbackMax = !page.playbackMax
+                        }
+                    }
+                }
             }
 
             // ---- Synced 4-camera grid (paneCount === 4) --------------------
@@ -988,6 +1034,7 @@ Item {
 
         // ---- Right: calendar + clip thumbnail list ----
         Rectangle {
+            visible: !page.playbackMax
             Layout.preferredWidth: page.isPortrait ? -1 : 240
             Layout.fillWidth: page.isPortrait
             Layout.preferredHeight: page.isPortrait ? 340 : -1
