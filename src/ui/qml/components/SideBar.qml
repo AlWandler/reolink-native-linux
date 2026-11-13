@@ -15,6 +15,7 @@ Rectangle {
     property real _w: hidden ? collapsedWidth : Theme.sidebarWidth
     Behavior on _w { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
     width: _w
+    implicitWidth: _w
 
     signal addRequested()
     signal deviceClicked(int row)      // open this camera in Live View
@@ -85,7 +86,7 @@ Rectangle {
                 text: "▸"
                 color: Theme.accent; font.pixelSize: 14
             }
-            TapHandler { onTapped: root.collapsed = false }
+            TapHandler { onTapped: root.hidden = false }
         }
 
         // ── Expanded header ───────────────────────────────────────────
