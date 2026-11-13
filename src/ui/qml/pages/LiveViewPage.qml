@@ -238,34 +238,6 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Rectangle {
-                width: 34
-                height: 26
-                radius: Theme.radius
-                color: fsArea.containsMouse ? Theme.surfaceAlt : Theme.surface
-                border.color: Theme.border
-                Text {
-                    anchors.centerIn: parent
-                    text: "⛶"
-                    color: Theme.textMuted
-                    font.pixelSize: 13
-                }
-                MouseArea {
-                    id: fsArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: page.fullscreenToggled()
-                }
-                ToolTip {
-                    visible: fsArea.containsMouse
-                    delay: 500
-                    x: (parent.width - width) / 2
-                    y: parent.height + 6
-                    contentItem: Text { text: qsTr("Fullscreen (F11)"); color: Theme.text; font.pixelSize: 11 }
-                    background: Rectangle { color: Theme.surfaceAlt; border.color: Theme.border; radius: 4 }
-                }
-            }
         }
 
         Item {
