@@ -9,6 +9,7 @@ ApplicationWindow {
     // Set by the deployment environment (portrait HMI vs landscape desktop).
     // All pages read this to choose their layout arrangement.
     property bool isPortrait: width < height
+    property bool sidebarCollapsed: false
     id: window
     width: 1400
     height: 860
@@ -142,6 +143,8 @@ ApplicationWindow {
             SideBar {
                 Layout.fillHeight: true
                 visible: !window.videoFullscreen
+                collapsed: window.sidebarCollapsed
+                onCollapsedChanged: window.sidebarCollapsed = collapsed
                 onAddRequested: addDeviceDialog.open()
                 // Clicking a camera jumps to Live View with it full-size.
                 onDeviceClicked: (row) => {

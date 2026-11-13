@@ -7,8 +7,14 @@ import ReolinkApp.Core
 
 Rectangle {
     id: root
-    width: Theme.sidebarWidth
     color: Theme.surface
+    clip: true
+
+    property bool collapsed: false
+    readonly property int collapsedWidth: 24
+    property real _w: collapsed ? collapsedWidth : Theme.sidebarWidth
+    Behavior on _w { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
+    width: _w
 
     signal addRequested()
     signal deviceClicked(int row)      // open this camera in Live View
@@ -68,7 +74,23 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
+        // ── Collapsed strip — tap to expand ──────────────────────────
+        Rectangle {
+            visible: root.collapsed
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+            Text {
+                anchors.centerIn: parent
+                text: "▸"
+                color: Theme.accent; font.pixelSize: 14
+            }
+            TapHandler { onTapped: root.collapsed = false }
+        }
+
+        // ── Expanded header ───────────────────────────────────────────
         RowLayout {
+            visible: !root.collapsed
             Layout.fillWidth: true
             Layout.margins: Theme.spacing
             Text {
@@ -78,21 +100,20 @@ Rectangle {
                 font.bold: true
             }
             Item { Layout.fillWidth: true }
+            // Collapse button
             Rectangle {
-                width: 26
-                height: 26
-                radius: Theme.radius
+                width: 26; height: 26; radius: Theme.radius
+                color: colArea.hovered ? Theme.accentDim : Theme.surfaceAlt
+                Text { anchors.centerIn: parent; text: "◂"; color: Theme.text; font.pixelSize: 14 }
+                HoverHandler { id: colArea }
+                TapHandler { onTapped: root.collapsed = true }
+            }
+            Rectangle {
+                width: 26; height: 26; radius: Theme.radius
                 color: addArea.containsMouse ? Theme.accentDim : Theme.surfaceAlt
-                Text {
-                    anchors.centerIn: parent
-                    text: "+"
-                    color: Theme.text
-                    font.pixelSize: 16
-                }
+                Text { anchors.centerIn: parent; text: "+"; color: Theme.text; font.pixelSize: 16 }
                 MouseArea {
-                    id: addArea
-                    anchors.fill: parent
-                    hoverEnabled: true
+                    id: addArea; anchors.fill: parent; hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.addRequested()
                 }
@@ -100,6 +121,7 @@ Rectangle {
         }
 
         ListView {
+            visible: !root.collapsed
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: Devices
