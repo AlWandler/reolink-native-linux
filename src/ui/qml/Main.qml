@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.VirtualKeyboard
 import QtQuick.Controls
 import QtQuick.Layouts
 import ReolinkApp
@@ -362,16 +361,6 @@ ApplicationWindow {
             else if (!ok)
                 toast.show(qsTr("%1 failed: %2").arg(command).arg(error), true);
         }
-    }
-
-    // ── On-screen keyboard — appears automatically when any text field is focused
-    InputPanel {
-        id: inputPanel
-        z: 110
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        visible: active
     }
 
 }
