@@ -10,9 +10,9 @@ Rectangle {
     color: Theme.surface
     clip: true
 
-    property bool collapsed: false
+    property bool hidden: false
     readonly property int collapsedWidth: 24
-    property real _w: collapsed ? collapsedWidth : Theme.sidebarWidth
+    property real _w: hidden ? collapsedWidth : Theme.sidebarWidth
     Behavior on _w { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
     width: _w
 
@@ -76,7 +76,7 @@ Rectangle {
 
         // ── Collapsed strip — tap to expand ──────────────────────────
         Rectangle {
-            visible: root.collapsed
+            visible: root.hidden
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "transparent"
@@ -90,7 +90,7 @@ Rectangle {
 
         // ── Expanded header ───────────────────────────────────────────
         RowLayout {
-            visible: !root.collapsed
+            visible: !root.hidden
             Layout.fillWidth: true
             Layout.margins: Theme.spacing
             Text {
@@ -106,7 +106,7 @@ Rectangle {
                 color: colArea.hovered ? Theme.accentDim : Theme.surfaceAlt
                 Text { anchors.centerIn: parent; text: "◂"; color: Theme.text; font.pixelSize: 14 }
                 HoverHandler { id: colArea }
-                TapHandler { onTapped: root.collapsed = true }
+TapHandler { onTapped: root.hidden = true }
             }
             Rectangle {
                 width: 26; height: 26; radius: Theme.radius
@@ -121,7 +121,7 @@ Rectangle {
         }
 
         ListView {
-            visible: !root.collapsed
+visible: !root.hidden
             Layout.fillWidth: true
             Layout.fillHeight: true
             model: Devices
