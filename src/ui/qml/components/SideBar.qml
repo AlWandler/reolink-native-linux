@@ -304,7 +304,7 @@ visible: !root.hidden
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: camRow.underNvr ? 30 : Theme.spacing
-                    anchors.rightMargin: Theme.spacing
+                    anchors.rightMargin: 38
                     anchors.topMargin: 4
                     anchors.bottomMargin: 4
                     spacing: Theme.spacing
@@ -382,23 +382,6 @@ visible: !root.hidden
                         }
                     }
 
-                    // ── Gear button — opens camera management menu on tap ──
-                    Rectangle {
-                        width: 30; height: 30; radius: 4
-                        color: gearHov.hovered ? Theme.surfaceAlt : "transparent"
-                        Layout.alignment: Qt.AlignVCenter
-                        Text {
-                            anchors.centerIn: parent
-                            text: "⚙"
-                            color: Theme.textMuted
-                            font.pixelSize: 14
-                        }
-                        HoverHandler { id: gearHov }
-                        TapHandler {
-                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: camMenu.popup()
-                        }
-                    }
                 }
 
                 // Dragged into a Live View cell to put this camera there. Lives in
@@ -488,6 +471,27 @@ visible: !root.hidden
                             return;
                         camDrag.Drag.active = false;
                         dragging = false;
+                    }
+                }
+
+                // ── Gear: direct child of camRow, after MouseArea → higher Z ──
+                Rectangle {
+                    id: gearBtn
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 30; height: 30; radius: 4
+                    color: gearHov.hovered ? Theme.surfaceAlt : "transparent"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⚙"
+                        color: Theme.textMuted
+                        font.pixelSize: 14
+                    }
+                    HoverHandler { id: gearHov }
+                    TapHandler {
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                        onTapped: camMenu.popup()
                     }
                 }
 
