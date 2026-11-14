@@ -514,11 +514,7 @@ Rectangle {
                 }
             }
             // Pop out into a detached window (drag to another monitor).
-            ToolButton {
-                glyph: "⧉"
-                tip: qsTr("Pop out to a window")
-                onActivated: if (root.hasSource) root.popOut(root.deviceRow, root.label)
-            }
+
             ToolButton {
                 glyph: "⛶"
                 tip: root.forceMain ? qsTr("Restore grid") : qsTr("Maximize")
