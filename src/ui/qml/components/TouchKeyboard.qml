@@ -70,7 +70,7 @@ Item {
                 Text {
                     anchors.right: parent.right; anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "✕  CLOSE"; color: Theme.textMuted; font.pixelSize: 11
+                    text: "✕  CLOSE"; color: "#ffffff"; font.pixelSize: 11; font.bold: true
                 }
                 MouseArea {
                     anchors.fill: parent
