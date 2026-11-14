@@ -71,6 +71,8 @@ set(APP_QML_FILES
     src/ui/qml/components/DoorbellOverlay.qml
     src/ui/qml/components/PoppedWindow.qml
     src/ui/qml/components/FisheyeView.qml
+    src/ui/qml/components/TouchKeyboard.qml
+    src/ui/qml/components/KbKey.qml
     src/ui/qml/pages/LiveViewPage.qml
     src/ui/qml/pages/PlaybackPage.qml
     src/ui/qml/pages/EventsPage.qml

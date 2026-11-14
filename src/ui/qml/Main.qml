@@ -5,12 +5,12 @@ import ReolinkApp
 import ReolinkApp.Core
 
 ApplicationWindow {
+    id: window
     // ── Orientation ──────────────────────────────────────────────────
     // Set by the deployment environment (portrait HMI vs landscape desktop).
     // All pages read this to choose their layout arrangement.
     property bool isPortrait: width < height
     property bool sidebarHidden: false
-    id: window
     width: 1400
     height: 860
     visible: typeof startHidden === "undefined" || !startHidden
@@ -305,11 +305,8 @@ ApplicationWindow {
     }
 
     // Detached camera windows for multi-monitor viewing.
-    Component { id: popoutComponent; PoppedWindow {
-    // ── Orientation ──────────────────────────────────────────────────
-    // Set by the deployment environment (portrait HMI vs landscape desktop).
-    // All pages read this to choose their layout arrangement.
-    property bool isPortrait: width < height} }
+    Component { id: popoutComponent; PoppedWindow { } }
+
     function openPopout(row, label) {
         popoutComponent.createObject(window, { deviceRow: row, label: label });
     }
@@ -362,5 +359,9 @@ ApplicationWindow {
                 toast.show(qsTr("%1 failed: %2").arg(command).arg(error), true);
         }
     }
+
+
+    // ── QML on-screen keyboard — no Wayland IM needed, works on rotated displays
+    TouchKeyboard {}
 
 }
