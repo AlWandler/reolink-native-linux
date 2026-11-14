@@ -11,32 +11,22 @@ Item {
 
     property bool shifted: false
     property bool numMode: false
-    property var focusedItem: null   // last known writable text field
+    property var focusedItem: null
 
-    // Walk up the parent chain to check if item is inside the keyboard
-    function isInsideKb(item) {
-        var p = item
-        while (p !== null && p !== undefined) {
-            if (p === kb) return true
-            p = p.parent
-        }
-        return false
-    }
-
+    // Show when a writable text field gains focus.
+    // Never auto-hide — only OK/CLOSE buttons dismiss it.
     Connections {
         target: kb.Window.window
         enabled: kb.Window.window !== null
         function onActiveFocusItemChanged() {
             var item = kb.Window.window ? kb.Window.window.activeFocusItem : null
-            // If focus moved to something inside the keyboard itself, ignore —
-            // the text field will get focus back after typeChar.
-            if (item !== null && kb.isInsideKb(item)) return
-            var ok = item !== null
-                  && typeof item.text !== "undefined"
-                  && item.readOnly !== true
-            if (ok) kb.focusedItem = item
-            else    kb.focusedItem = null
-            kb.visible = ok
+            if (item !== null
+                && typeof item.text !== "undefined"
+                && item.readOnly !== true) {
+                kb.focusedItem = item
+                kb.visible = true
+            }
+            // Intentionally do NOT hide here — tap OK/CLOSE to dismiss
         }
     }
 
@@ -62,7 +52,6 @@ Item {
             if (kb.shifted && ch.length === 1 && ch >= "a" && ch <= "z")
                 kb.shifted = false
         }
-        // Restore focus to the text field after every keystroke
         Qt.callLater(function() { if (kb.focusedItem) kb.focusedItem.forceActiveFocus() })
     }
 
