@@ -361,7 +361,13 @@ ApplicationWindow {
     }
 
 
-    // ── QML on-screen keyboard — no Wayland IM needed, works on rotated displays
-    TouchKeyboard {}
+    // ── QML on-screen keyboard — parented to Overlay.overlay so modal dialogs
+    // don't block it (modal backdrop only blocks items BEHIND the overlay layer)
+    TouchKeyboard {
+        parent: Overlay.overlay
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+    }
 
 }
