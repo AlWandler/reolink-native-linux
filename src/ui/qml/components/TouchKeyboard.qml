@@ -11,21 +11,37 @@ Item {
 
     property bool shifted: false
     property bool numMode: false
+    property var focusedItem: null   // last known writable text field
+
+    // Walk up the parent chain to check if item is inside the keyboard
+    function isInsideKb(item) {
+        var p = item
+        while (p !== null && p !== undefined) {
+            if (p === kb) return true
+            p = p.parent
+        }
+        return false
+    }
 
     Connections {
         target: kb.Window.window
         enabled: kb.Window.window !== null
         function onActiveFocusItemChanged() {
             var item = kb.Window.window ? kb.Window.window.activeFocusItem : null
+            // If focus moved to something inside the keyboard itself, ignore —
+            // the text field will get focus back after typeChar.
+            if (item !== null && kb.isInsideKb(item)) return
             var ok = item !== null
                   && typeof item.text !== "undefined"
                   && item.readOnly !== true
+            if (ok) kb.focusedItem = item
+            else    kb.focusedItem = null
             kb.visible = ok
         }
     }
 
     function typeChar(ch) {
-        var item = kb.Window.window ? kb.Window.window.activeFocusItem : null
+        var item = kb.focusedItem
         if (!item || typeof item.text === "undefined") return
         if (ch === "BK") {
             var p = item.cursorPosition
@@ -35,6 +51,8 @@ Item {
             }
         } else if (ch === "OK") {
             kb.visible = false
+            kb.focusedItem = null
+            return
         } else {
             var c = (kb.shifted && ch.length === 1 && ch >= "a" && ch <= "z")
                     ? ch.toUpperCase() : ch
@@ -44,6 +62,8 @@ Item {
             if (kb.shifted && ch.length === 1 && ch >= "a" && ch <= "z")
                 kb.shifted = false
         }
+        // Restore focus to the text field after every keystroke
+        Qt.callLater(function() { if (kb.focusedItem) kb.focusedItem.forceActiveFocus() })
     }
 
     Rectangle {
@@ -63,7 +83,10 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "✕  CLOSE"; color: Theme.textMuted; font.pixelSize: 11
                 }
-                MouseArea { anchors.fill: parent; onClicked: kb.visible = false }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: { kb.visible = false; kb.focusedItem = null }
+                }
             }
 
             Repeater {
