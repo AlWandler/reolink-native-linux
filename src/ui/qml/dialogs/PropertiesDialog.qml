@@ -9,6 +9,7 @@ import ReolinkApp.Core
 // from Devices.hostInfo()/cameraInfo(). Actions that mutate the device are gated
 // on the admin flag.
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dialog
     modal: true
     width: 460

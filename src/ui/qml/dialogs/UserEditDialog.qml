@@ -9,6 +9,7 @@ import ReolinkApp.Core
 // ModifyUser {User:{userName,newPassword,oldPassword}}. Admin-only (the caller
 // gates the entry points); the write itself is also rejected server-side if not.
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dialog
     modal: true
     width: 420

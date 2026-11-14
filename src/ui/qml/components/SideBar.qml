@@ -549,6 +549,7 @@ visible: !root.hidden
     Dialog {
         id: credsDialog
         modal: true
+        closePolicy: Popup.CloseOnEscape
         width: 360
         anchors.centerIn: Overlay.overlay
         property int targetRow: -1

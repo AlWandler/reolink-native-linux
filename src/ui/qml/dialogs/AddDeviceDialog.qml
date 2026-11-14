@@ -5,6 +5,7 @@ import ReolinkApp
 import ReolinkApp.Core
 
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dialog
     title: qsTr("Add Device")
     modal: true

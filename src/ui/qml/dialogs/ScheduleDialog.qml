@@ -8,6 +8,7 @@ import ReolinkApp.Core
 // the device as a 168-char '0'/'1' table (day-major). Drag to paint; Save
 // writes the selected type's table back over Baichuan (cmd 81/82).
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dlg
     modal: true
     anchors.centerIn: Overlay.overlay

@@ -9,6 +9,7 @@ import ReolinkApp.Core
 // row-major over columns x rows. This decodes it onto a snapshot of the camera,
 // lets the user drag to toggle regions, and writes the re-encoded mask back.
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dlg
     modal: true
     anchors.centerIn: Overlay.overlay

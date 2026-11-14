@@ -7,6 +7,7 @@ import ReolinkApp.Core
 // A themed confirmation sheet for destructive actions. The caller sets the text
 // and a `payload`, opens it, and handles `confirmed(payload)`.
 Dialog {
+    closePolicy: Popup.CloseOnEscape
     id: dialog
     modal: true
     width: 420
